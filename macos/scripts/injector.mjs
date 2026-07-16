@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const SKIN_VERSION = "1.2.2";
+const SKIN_VERSION = "1.2.4";
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const MAX_ART_BYTES = 16 * 1024 * 1024;
 
@@ -364,16 +364,22 @@ async function verifySession(session) {
     const homeRoute = homeSignal?.closest('[role="main"]') ?? null;
     const home = document.querySelector('[role="main"].dream-skin-home');
     const suggestions = home?.querySelector('.group\\\\/home-suggestions') ?? null;
-    const cardBoxes = suggestions ? [...suggestions.querySelectorAll('button')].map(box) : [];
+    const cardBoxes = suggestions ? [...suggestions.querySelectorAll('button')].map((button) => ({
+      ...box(button),
+      cardIndex: Number(button.getAttribute('data-dream-skin-card')) || null,
+      hasBackgroundArt: getComputedStyle(button).backgroundImage.includes('blob:'),
+    })) : [];
     const visibleCards = cardBoxes.filter((item) => item?.visible);
     const hero = box(home?.firstElementChild?.firstElementChild?.firstElementChild);
     const projectButton = box(home?.querySelector('.group\\\\/project-selector > button'));
     const composer = box(document.querySelector('.composer-surface-chrome'));
+    const composerDecor = document.getElementById('dream-skin-composer-stickers');
     const sidebar = box(document.querySelector('aside.app-shell-left-panel'));
     const chrome = document.getElementById('codex-dream-skin-chrome');
     const result = {
       installed: document.documentElement.classList.contains('codex-dream-skin'),
       version: window.__CODEX_DREAM_SKIN_STATE__?.version ?? null,
+      themeId: document.documentElement.getAttribute('data-dream-theme'),
       stylePresent: Boolean(document.getElementById('codex-dream-skin-style')),
       chromePresent: Boolean(chrome),
       chromePointerEvents: getComputedStyle(chrome || document.body).pointerEvents,
@@ -382,8 +388,11 @@ async function verifySession(session) {
       hero,
       cards: cardBoxes,
       visibleCardCount: visibleCards.length,
+      cardArtCount: visibleCards.filter((item) => item.hasBackgroundArt && item.cardIndex <= 4).length,
       projectButton,
       composer,
+      composerDecorPresent: Boolean(composerDecor),
+      composerDecorPointerEvents: composerDecor ? getComputedStyle(composerDecor).pointerEvents : null,
       sidebar,
       viewport: { width: innerWidth, height: innerHeight },
       documentOverflow: {
@@ -393,11 +402,13 @@ async function verifySession(session) {
     };
     const basePass = result.installed && result.version === ${JSON.stringify(SKIN_VERSION)} &&
       result.stylePresent && result.chromePresent && result.chromePointerEvents === 'none' &&
-      Boolean(result.composer?.visible) && Boolean(result.sidebar?.visible) && !result.documentOverflow.x;
+      Boolean(result.composer?.visible) && Boolean(result.sidebar?.visible) && !result.documentOverflow.x &&
+      (result.themeId !== 'mizuki-25ji' || (result.composerDecorPresent && result.composerDecorPointerEvents === 'none'));
     // Project selector markup varies across Codex builds — soft requirement.
     const homePass = !result.homeRoute || (
       result.homePresent && result.hero?.visible && result.hero.width >= 280 && result.hero.height >= 120 &&
-      result.visibleCardCount >= 1 && result.visibleCardCount <= 6
+      result.visibleCardCount >= 1 && result.visibleCardCount <= 6 &&
+      (result.themeId !== 'mizuki-25ji' || result.cardArtCount === Math.min(4, result.visibleCardCount))
     );
     result.pass = Boolean(basePass && homePass);
     result.softNotes = {

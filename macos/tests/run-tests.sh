@@ -34,6 +34,13 @@ MIZUKI_PAYLOAD_JSON="$("$NODE" "$ROOT/scripts/injector.mjs" --check-payload --th
   if (!value.pass || value.themeId !== "mizuki-25ji" || value.themeName !== "25時・暁山瑞希") process.exit(1);
   if (!Number.isFinite(value.decorationBytes) || value.decorationBytes < 1) process.exit(1);
 ' "$MIZUKI_PAYLOAD_JSON"
+for card in 1 2 3 4; do
+  /usr/bin/grep -Fq "button[data-dream-skin-card=\"$card\"]" "$ROOT/assets/dream-skin.css"
+  /usr/bin/grep -Fq -- "--dream-skin-art-card$card" "$ROOT/assets/dream-skin.css"
+done
+/usr/bin/grep -Fq 'setAttribute("data-dream-skin-card"' "$ROOT/assets/renderer-inject.js"
+/usr/bin/grep -Fq 'dream-skin-composer-stickers' "$ROOT/assets/renderer-inject.js"
+/usr/bin/grep -Fq '@keyframes mizuki-sticker-twinkle' "$ROOT/assets/dream-skin.css"
 
 TMP="$(/usr/bin/mktemp -d /tmp/codex-dream-skin-tests.XXXXXX)"
 trap '/bin/rm -rf "$TMP"' EXIT

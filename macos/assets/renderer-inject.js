@@ -3,6 +3,7 @@
   const DISABLED_KEY = "__CODEX_DREAM_SKIN_DISABLED__";
   const STYLE_ID = "codex-dream-skin-style";
   const CHROME_ID = "codex-dream-skin-chrome";
+  const COMPOSER_DECOR_ID = "dream-skin-composer-stickers";
   const SHELL_ATTR = "data-dream-shell";
   const THEME_ATTR = "data-dream-theme";
   const VERSION = __DREAM_SKIN_VERSION_JSON__;
@@ -201,11 +202,40 @@
     const home = homeIndicator?.closest('[role="main"]') ||
       [...document.querySelectorAll('[role="main"]')].find((candidate) =>
         candidate.querySelector('[data-feature="game-source"]') &&
-        candidate.querySelector('.group\\\\/home-suggestions')) || null;
+        candidate.querySelector('.group\\/home-suggestions')) || null;
     for (const candidate of document.querySelectorAll('[role="main"].dream-skin-home')) {
       if (candidate !== home) candidate.classList.remove("dream-skin-home");
     }
     if (home) home.classList.add("dream-skin-home");
+    const suggestions = home?.querySelector('.group\\/home-suggestions');
+    const suggestionButtons = suggestions ? [...suggestions.querySelectorAll("button")] : [];
+    suggestionButtons.forEach((button, index) => {
+      button.setAttribute("data-dream-skin-card", String(index + 1));
+    });
+    document.querySelectorAll('[data-dream-skin-card]').forEach((button) => {
+      if (!suggestionButtons.includes(button)) button.removeAttribute("data-dream-skin-card");
+    });
+
+    const composer = document.querySelector(".composer-surface-chrome");
+    let composerDecor = document.getElementById(COMPOSER_DECOR_ID);
+    if (composer && THEME.id === "mizuki-25ji") {
+      if (!composerDecor || composerDecor.parentElement !== composer) {
+        composerDecor?.remove();
+        composerDecor = document.createElement("div");
+        composerDecor.id = COMPOSER_DECOR_ID;
+        composerDecor.setAttribute("aria-hidden", "true");
+        composerDecor.innerHTML = `
+          <i class="dream-sticker-tape"></i>
+          <span class="dream-sticker-time">25:00</span>
+          <span class="dream-sticker-cut">MV / CUT 04</span>
+          <i class="dream-sticker-spark dream-sticker-spark-a">✦</i>
+          <i class="dream-sticker-spark dream-sticker-spark-b">✧</i>
+          <i class="dream-sticker-frame"></i>`;
+        composer.appendChild(composerDecor);
+      }
+    } else {
+      composerDecor?.remove();
+    }
 
     if (!shellMain || !document.body) return;
     shellMain.classList.toggle("dream-skin-home-shell", Boolean(home));
@@ -249,6 +279,8 @@
     for (const name of THEME_VARIABLES) document.documentElement?.style.removeProperty(name);
     document.querySelectorAll(".dream-skin-home").forEach((node) => node.classList.remove("dream-skin-home"));
     document.querySelectorAll(".dream-skin-home-shell").forEach((node) => node.classList.remove("dream-skin-home-shell"));
+    document.querySelectorAll('[data-dream-skin-card]').forEach((node) => node.removeAttribute("data-dream-skin-card"));
+    document.getElementById(COMPOSER_DECOR_ID)?.remove();
     document.getElementById(STYLE_ID)?.remove();
     document.getElementById(CHROME_ID)?.remove();
     const state = window[STATE_KEY];

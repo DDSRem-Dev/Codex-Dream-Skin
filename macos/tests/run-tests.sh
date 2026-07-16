@@ -62,8 +62,21 @@ BACKUP="$TMP/theme-backup.json"
 /bin/cp "$CONFIG" "$TMP/original.toml"
 "$NODE" "$ROOT/scripts/theme-config.mjs" install "$CONFIG" "$BACKUP" >/dev/null
 /usr/bin/cmp -s "$CONFIG" "$TMP/original.toml"
+"$NODE" -e '
+  const backup = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+  if (backup.values.appearanceTheme !== `appearanceTheme = "system"`) process.exit(1);
+  if (backup.values.appearanceDarkCodeThemeId !== `appearanceDarkCodeThemeId = "vscode-dark"`) process.exit(1);
+' "$BACKUP"
 "$NODE" "$ROOT/scripts/theme-config.mjs" restore "$CONFIG" "$BACKUP" >/dev/null
 /usr/bin/cmp -s "$CONFIG" "$TMP/original.toml"
+
+NO_DESKTOP_CONFIG="$TMP/config-without-desktop.toml"
+NO_DESKTOP_BACKUP="$TMP/theme-backup-without-desktop.json"
+/usr/bin/printf '%s\n' 'model = "gpt-5"' 'keepMe = true' > "$NO_DESKTOP_CONFIG"
+/bin/cp "$NO_DESKTOP_CONFIG" "$TMP/original-without-desktop.toml"
+"$NODE" "$ROOT/scripts/theme-config.mjs" install "$NO_DESKTOP_CONFIG" "$NO_DESKTOP_BACKUP" >/dev/null
+"$NODE" "$ROOT/scripts/theme-config.mjs" restore "$NO_DESKTOP_CONFIG" "$NO_DESKTOP_BACKUP" >/dev/null
+/usr/bin/cmp -s "$NO_DESKTOP_CONFIG" "$TMP/original-without-desktop.toml"
 
 EXPECTED_HOME="$(/usr/bin/id -P "$(/usr/bin/id -un)" | /usr/bin/awk -F: '{print $9}')"
 /usr/bin/env -u HOME /bin/bash -c '. "$1/scripts/common-macos.sh"; [ "$HOME" = "$2" ] && [ "$SKIN_VERSION" = "$(/usr/bin/tr -d "[:space:]" < "$1/VERSION")" ]' _ "$ROOT" "$EXPECTED_HOME"
@@ -86,4 +99,4 @@ else
   DOCTOR_RESULT="doctor skipped"
 fi
 
-printf 'PASS: syntax, payload, bundled/custom themes, config round-trip, HOME recovery; %s.\n' "$DOCTOR_RESULT"
+printf 'PASS: syntax, payload, bundled/custom themes, config round-trips, HOME recovery; %s.\n' "$DOCTOR_RESULT"

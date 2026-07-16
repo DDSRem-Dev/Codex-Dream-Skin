@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const SKIN_VERSION = "1.2.5";
+const SKIN_VERSION = "1.2.6";
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const MAX_ART_BYTES = 16 * 1024 * 1024;
 
@@ -203,19 +203,18 @@ async function connectCodexTargets(port, timeoutMs) {
 }
 
 async function loadTheme(themeDir) {
-  const defaultAssetsRoot = path.join(root, "assets");
-  let assetsRoot = defaultAssetsRoot;
-  if (themeDir) {
-    try {
-      await fs.access(path.join(themeDir, "theme.json"));
-      assetsRoot = themeDir;
-    } catch (error) {
-      if (error.code !== "ENOENT") throw error;
-    }
-  }
-
+  const assetsRoot = themeDir ?? path.join(root, "assets");
   const configPath = path.join(assetsRoot, "theme.json");
-  const raw = JSON.parse(await fs.readFile(configPath, "utf8"));
+  let config;
+  try {
+    config = await fs.readFile(configPath, "utf8");
+  } catch (error) {
+    if (themeDir && error.code === "ENOENT") {
+      throw new Error(`Explicit theme directory is missing theme.json: ${configPath}`);
+    }
+    throw error;
+  }
+  const raw = JSON.parse(config);
   if (raw.schemaVersion !== 1 || typeof raw.image !== "string" || !raw.image) {
     throw new Error(`${configPath} has an unsupported schema or image field`);
   }

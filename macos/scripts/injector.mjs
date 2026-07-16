@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const SKIN_VERSION = "1.2.6";
+const SKIN_VERSION = "1.2.7";
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const MAX_ART_BYTES = 16 * 1024 * 1024;
 
@@ -164,7 +164,7 @@ async function probeSession(session) {
       title: document.title,
       href: location.href,
       markers,
-      codex: markers.shell && markers.sidebar && (markers.composer || markers.main),
+      codex: markers.shell && (markers.composer || markers.main),
     };
   })()`);
 }
@@ -404,10 +404,12 @@ async function verifySession(session) {
     };
     const basePass = result.installed && result.version === ${JSON.stringify(SKIN_VERSION)} &&
       result.stylePresent && result.chromePresent && result.chromePointerEvents === 'none' &&
-      Boolean(result.composer?.visible) && Boolean(result.sidebar?.visible) && !result.documentOverflow.x &&
+      Boolean(result.composer?.visible) && !result.documentOverflow.x &&
       (result.themeId !== 'mizuki-25ji' || (
         result.composerDecorPresent && result.composerDecorPointerEvents === 'none' &&
-        result.sidebarDecorPresent && result.sidebarDecorPointerEvents === 'none'
+        (!result.sidebar?.visible || (
+          result.sidebarDecorPresent && result.sidebarDecorPointerEvents === 'none'
+        ))
       ));
     // Project selector markup varies across Codex builds — soft requirement.
     const homePass = !result.homeRoute || (

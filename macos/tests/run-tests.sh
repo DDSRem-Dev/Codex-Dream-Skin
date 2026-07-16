@@ -43,9 +43,14 @@ for card in 1 2 3 4; do
   /usr/bin/grep -Fq "button[data-dream-skin-card=\"$card\"]" "$ROOT/assets/dream-skin.css"
   /usr/bin/grep -Fq -- "--dream-skin-art-card$card" "$ROOT/assets/dream-skin.css"
 done
-/usr/bin/grep -Fq 'setAttribute("data-dream-skin-card"' "$ROOT/assets/renderer-inject.js"
+/usr/bin/grep -Fq 'setAttributeIfChanged(button, "data-dream-skin-card"' "$ROOT/assets/renderer-inject.js"
 /usr/bin/grep -Fq 'dream-skin-composer-stickers' "$ROOT/assets/renderer-inject.js"
 /usr/bin/grep -Fq 'dream-skin-sidebar-stickers' "$ROOT/assets/renderer-inject.js"
+/usr/bin/grep -Fq 'data-dream-home-layout' "$ROOT/assets/renderer-inject.js"
+/usr/bin/grep -Fq 'data-dream-left-overlay' "$ROOT/assets/dream-skin.css"
+/usr/bin/grep -Fq 'new ResizeObserver(scheduleLayout)' "$ROOT/assets/renderer-inject.js"
+/usr/bin/grep -Fq 'setStyleIfChanged' "$ROOT/assets/renderer-inject.js"
+/usr/bin/grep -Fq 'markers.shell && (markers.composer || markers.main)' "$ROOT/scripts/injector.mjs"
 /usr/bin/grep -Fq '@keyframes mizuki-sticker-twinkle' "$ROOT/assets/dream-skin.css"
 /usr/bin/grep -Fq '@keyframes mizuki-sidebar-scan' "$ROOT/assets/dream-skin.css"
 
@@ -58,7 +63,7 @@ RUNTIME_STATE="$RUNTIME_STATE_ROOT/state.json"
 STATE_EVAL_MARKER="$TMP/state-eval-marker"
 EXPECTED_BUNDLE="/Applications/Codex \$(touch \"$STATE_EVAL_MARKER\").app"
 EXPECTED_EXE="$EXPECTED_BUNDLE/Contents/MacOS/ChatGPT; touch \"$STATE_EVAL_MARKER\""
-EXPECTED_VERSION='1.2.6 "nightly"'
+EXPECTED_VERSION='1.2.7 "nightly"'
 EXPECTED_TEAM_ID="TEAM'ID"
 /bin/mkdir -p "$RUNTIME_STATE_ROOT"
 "$NODE" -e '

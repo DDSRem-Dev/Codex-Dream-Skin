@@ -7,18 +7,23 @@
   const SIDEBAR_DECOR_ID = "dream-skin-sidebar-stickers";
   const SHELL_ATTR = "data-dream-shell";
   const THEME_ATTR = "data-dream-theme";
+  const HOME_LAYOUT_ATTR = "data-dream-home-layout";
+  const LEFT_OVERLAY_ATTR = "data-dream-left-overlay";
+  const LEFT_COLLAPSED_ATTR = "data-dream-left-collapsed";
   const VERSION = __DREAM_SKIN_VERSION_JSON__;
   const THEME = themeConfig && typeof themeConfig === "object" ? themeConfig : {};
   const THEME_VARIABLES = [
     "--ds-bg", "--ds-panel", "--ds-panel-2", "--ds-green", "--ds-lime",
     "--ds-cyan", "--ds-purple", "--ds-text", "--ds-muted", "--ds-line",
     "--dream-skin-name", "--dream-skin-tagline", "--dream-skin-project-prefix",
-    "--dream-skin-project-label",
+    "--dream-skin-project-label", "--dream-skin-left-overlay-width",
   ];
   window[DISABLED_KEY] = false;
 
   const previous = window[STATE_KEY];
   if (previous?.observer) previous.observer.disconnect();
+  if (previous?.layoutObserver) previous.layoutObserver.disconnect();
+  if (previous?.layoutScheduler?.frame) cancelAnimationFrame(previous.layoutScheduler.frame);
   if (previous?.timer) clearInterval(previous.timer);
   if (previous?.scheduler?.timeout) clearTimeout(previous.scheduler.timeout);
   if (previous?.resizeHandler) window.removeEventListener("resize", previous.resizeHandler);
@@ -121,6 +126,46 @@
     return "light";
   };
 
+  const setAttributeIfChanged = (element, name, value) => {
+    if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+  };
+
+  const setStyleIfChanged = (element, name, value) => {
+    if (element.style.getPropertyValue(name) !== value) element.style.setProperty(name, value);
+  };
+
+  const setTextIfChanged = (element, value) => {
+    if (element.textContent !== value) element.textContent = value;
+  };
+
+  const applyResponsiveLayout = (root, shellMain, home, sidebar, chrome = null) => {
+    const shellBox = shellMain?.getBoundingClientRect();
+    const homeBox = home?.getBoundingClientRect();
+    const sidebarBox = sidebar?.getBoundingClientRect();
+    const sidebarVisible = Boolean(sidebarBox && sidebarBox.width >= 80 && sidebarBox.height >= 80);
+    const overlayWidth = sidebarVisible && homeBox && sidebarBox.right > homeBox.left + 4
+      ? Math.min(homeBox.width, Math.max(0, sidebarBox.right - homeBox.left))
+      : 0;
+    const homeContentWidth = Math.max(0, (homeBox?.width || shellBox?.width || 0) - overlayWidth);
+    const homeLayout = homeContentWidth < 780 ? "compact" : homeContentWidth < 1120 ? "medium" : "wide";
+
+    setAttributeIfChanged(root, HOME_LAYOUT_ATTR, homeLayout);
+    setAttributeIfChanged(root, LEFT_OVERLAY_ATTR, overlayWidth > 0 ? "true" : "false");
+    setAttributeIfChanged(root, LEFT_COLLAPSED_ATTR, sidebarVisible ? "false" : "true");
+    setStyleIfChanged(root, "--dream-skin-left-overlay-width", `${Math.ceil(overlayWidth)}px`);
+
+    if (chrome && shellBox) {
+      const chromeLeft = homeBox ? homeBox.left + overlayWidth : shellBox.left;
+      const chromeWidth = homeBox ? homeContentWidth : shellBox.width;
+      setStyleIfChanged(chrome, "left", `${Math.round(chromeLeft)}px`);
+      setStyleIfChanged(chrome, "top", `${Math.round(shellBox.top)}px`);
+      setStyleIfChanged(chrome, "width", `${Math.round(chromeWidth)}px`);
+      setStyleIfChanged(chrome, "height", `${Math.round(shellBox.height)}px`);
+    }
+
+    return { shellBox, homeBox, sidebarBox, overlayWidth, homeContentWidth };
+  };
+
   const applyTheme = (root, shell) => {
     const colors = THEME.colors || {};
     const accent = colors.accent || (shell === "light" ? "#e25563" : "#7cff46");
@@ -159,12 +204,12 @@
     }
 
     for (const [name, value] of Object.entries(variables)) {
-      if (typeof value === "string" && value) root.style.setProperty(name, value);
+      if (typeof value === "string" && value) setStyleIfChanged(root, name, value);
     }
-    root.style.setProperty("--dream-skin-name", cssString(THEME.name || "Codex Dream Skin"));
-    root.style.setProperty("--dream-skin-tagline", cssString(THEME.tagline || "Make something wonderful."));
-    root.style.setProperty("--dream-skin-project-prefix", cssString(THEME.projectPrefix || "选择项目 · "));
-    root.style.setProperty("--dream-skin-project-label", cssString(THEME.projectLabel || "◉  选择项目"));
+    setStyleIfChanged(root, "--dream-skin-name", cssString(THEME.name || "Codex Dream Skin"));
+    setStyleIfChanged(root, "--dream-skin-tagline", cssString(THEME.tagline || "Make something wonderful."));
+    setStyleIfChanged(root, "--dream-skin-project-prefix", cssString(THEME.projectPrefix || "选择项目 · "));
+    setStyleIfChanged(root, "--dream-skin-project-label", cssString(THEME.projectLabel || "◉  选择项目"));
   };
 
   const existingStyle = document.getElementById(STYLE_ID);
@@ -179,11 +224,11 @@
     if (!root) return;
     const shell = detectShellMode();
     root.classList.add("codex-dream-skin");
-    root.setAttribute(SHELL_ATTR, shell);
-    root.setAttribute(THEME_ATTR, THEME.id || "custom");
-    root.style.setProperty("--dream-skin-art", `url("${artUrl}")`);
+    setAttributeIfChanged(root, SHELL_ATTR, shell);
+    setAttributeIfChanged(root, THEME_ATTR, THEME.id || "custom");
+    setStyleIfChanged(root, "--dream-skin-art", `url("${artUrl}")`);
     for (const [key, url] of Object.entries(artUrls)) {
-      root.style.setProperty(`--dream-skin-art-${key}`, `url("${url}")`);
+      setStyleIfChanged(root, `--dream-skin-art-${key}`, `url("${url}")`);
     }
     applyTheme(root, shell);
 
@@ -199,6 +244,7 @@
     }
 
     const shellMain = document.querySelector("main.main-surface") || document.querySelector("main");
+    const sidebar = document.querySelector("aside.app-shell-left-panel");
     const homeIndicator = document.querySelector('[data-testid="home-icon"]');
     const home = homeIndicator?.closest('[role="main"]') ||
       [...document.querySelectorAll('[role="main"]')].find((candidate) =>
@@ -208,10 +254,15 @@
       if (candidate !== home) candidate.classList.remove("dream-skin-home");
     }
     if (home) home.classList.add("dream-skin-home");
+    applyResponsiveLayout(root, shellMain, home, sidebar);
+    const layoutObserver = window[STATE_KEY]?.layoutObserver;
+    for (const target of [shellMain, home, sidebar]) {
+      if (target) layoutObserver?.observe(target);
+    }
     const suggestions = home?.querySelector('.group\\/home-suggestions');
     const suggestionButtons = suggestions ? [...suggestions.querySelectorAll("button")] : [];
     suggestionButtons.forEach((button, index) => {
-      button.setAttribute("data-dream-skin-card", String(index + 1));
+      setAttributeIfChanged(button, "data-dream-skin-card", String(index + 1));
     });
     document.querySelectorAll('[data-dream-skin-card]').forEach((button) => {
       if (!suggestionButtons.includes(button)) button.removeAttribute("data-dream-skin-card");
@@ -238,7 +289,6 @@
       composerDecor?.remove();
     }
 
-    const sidebar = document.querySelector("aside.app-shell-left-panel");
     let sidebarDecor = document.getElementById(SIDEBAR_DECOR_ID);
     if (sidebar && THEME.id === "mizuki-25ji") {
       if (!sidebarDecor || sidebarDecor.parentElement !== sidebar) {
@@ -279,15 +329,11 @@
         <div class="dream-skin-orbit"></div>`;
       document.body.appendChild(chrome);
     }
-    chrome.querySelector(".dream-skin-brand b").textContent = THEME.name || "Codex Dream Skin";
-    chrome.querySelector(".dream-skin-brand small").textContent = THEME.brandSubtitle || "CODEX DREAM SKIN";
-    chrome.querySelector(".dream-skin-status span").textContent = THEME.statusText || "DREAM SKIN ONLINE";
-    chrome.querySelector(".dream-skin-quote").textContent = THEME.quote || "MAKE SOMETHING WONDERFUL";
-    const shellBox = shellMain.getBoundingClientRect();
-    chrome.style.left = `${Math.round(shellBox.left)}px`;
-    chrome.style.top = `${Math.round(shellBox.top)}px`;
-    chrome.style.width = `${Math.round(shellBox.width)}px`;
-    chrome.style.height = `${Math.round(shellBox.height)}px`;
+    setTextIfChanged(chrome.querySelector(".dream-skin-brand b"), THEME.name || "Codex Dream Skin");
+    setTextIfChanged(chrome.querySelector(".dream-skin-brand small"), THEME.brandSubtitle || "CODEX DREAM SKIN");
+    setTextIfChanged(chrome.querySelector(".dream-skin-status span"), THEME.statusText || "DREAM SKIN ONLINE");
+    setTextIfChanged(chrome.querySelector(".dream-skin-quote"), THEME.quote || "MAKE SOMETHING WONDERFUL");
+    applyResponsiveLayout(root, shellMain, home, sidebar, chrome);
     chrome.classList.toggle("dream-skin-home-shell", Boolean(home));
     chrome.dataset.dreamShell = shell;
   };
@@ -297,6 +343,9 @@
     document.documentElement?.classList.remove("codex-dream-skin");
     document.documentElement?.removeAttribute(THEME_ATTR);
     document.documentElement?.removeAttribute(SHELL_ATTR);
+    document.documentElement?.removeAttribute(HOME_LAYOUT_ATTR);
+    document.documentElement?.removeAttribute(LEFT_OVERLAY_ATTR);
+    document.documentElement?.removeAttribute(LEFT_COLLAPSED_ATTR);
     document.documentElement?.style.removeProperty("--dream-skin-art");
     for (const key of Object.keys(artUrls)) document.documentElement?.style.removeProperty(`--dream-skin-art-${key}`);
     for (const name of THEME_VARIABLES) document.documentElement?.style.removeProperty(name);
@@ -309,8 +358,10 @@
     document.getElementById(CHROME_ID)?.remove();
     const state = window[STATE_KEY];
     state?.observer?.disconnect();
+    state?.layoutObserver?.disconnect();
     if (state?.timer) clearInterval(state.timer);
     if (state?.scheduler?.timeout) clearTimeout(state.scheduler.timeout);
+    if (state?.layoutScheduler?.frame) cancelAnimationFrame(state.layoutScheduler.frame);
     if (state?.resizeHandler) window.removeEventListener("resize", state.resizeHandler);
     if (state?.mediaHandler && state?.mediaQuery) {
       try { state.mediaQuery.removeEventListener("change", state.mediaHandler); } catch {}
@@ -322,14 +373,34 @@
   };
 
   const scheduler = { timeout: null };
+  const layoutScheduler = { frame: null };
+  const scheduleLayout = () => {
+    if (layoutScheduler.frame !== null) return;
+    layoutScheduler.frame = requestAnimationFrame(() => {
+      layoutScheduler.frame = null;
+      if (window[DISABLED_KEY]) return;
+      const root = document.documentElement;
+      const shellMain = document.querySelector("main.main-surface") || document.querySelector("main");
+      const home = document.querySelector('[role="main"].dream-skin-home');
+      const sidebar = document.querySelector("aside.app-shell-left-panel");
+      const chrome = document.getElementById(CHROME_ID);
+      if (root && shellMain) applyResponsiveLayout(root, shellMain, home, sidebar, chrome);
+    });
+  };
   const scheduleEnsure = () => {
     if (scheduler.timeout) clearTimeout(scheduler.timeout);
     scheduler.timeout = setTimeout(() => {
       scheduler.timeout = null;
       ensure();
-    }, 180);
+    }, 90);
   };
-  const observer = new MutationObserver(scheduleEnsure);
+  const layoutObserver = typeof ResizeObserver === "function"
+    ? new ResizeObserver(scheduleLayout)
+    : null;
+  const observer = new MutationObserver(() => {
+    scheduleLayout();
+    scheduleEnsure();
+  });
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
@@ -337,7 +408,7 @@
     attributeFilter: ["class", "data-theme", "data-appearance", "data-color-mode", "style"],
   });
   const timer = setInterval(ensure, 4000);
-  const resizeHandler = scheduleEnsure;
+  const resizeHandler = scheduleLayout;
   window.addEventListener("resize", resizeHandler, { passive: true });
 
   let mediaQuery = null;
@@ -352,6 +423,8 @@
     ensure,
     cleanup,
     observer,
+    layoutObserver,
+    layoutScheduler,
     timer,
     scheduler,
     resizeHandler,

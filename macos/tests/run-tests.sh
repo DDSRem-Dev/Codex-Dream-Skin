@@ -53,6 +53,7 @@ done
 /usr/bin/grep -Fq 'markers.shell && (markers.composer || markers.main)' "$ROOT/scripts/injector.mjs"
 /usr/bin/grep -Fq '@keyframes mizuki-sticker-twinkle' "$ROOT/assets/dream-skin.css"
 /usr/bin/grep -Fq '@keyframes mizuki-sidebar-scan' "$ROOT/assets/dream-skin.css"
+/usr/bin/grep -Fq 'right: -1px;' "$ROOT/assets/dream-skin.css"
 
 TMP="$(/usr/bin/mktemp -d /tmp/codex-dream-skin-tests.XXXXXX)"
 trap '/bin/rm -rf "$TMP"' EXIT

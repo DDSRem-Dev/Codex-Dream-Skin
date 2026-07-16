@@ -1211,16 +1211,17 @@ html.codex-dream-skin[data-dream-theme="mizuki-25ji"] #dream-skin-sidebar-sticke
 
 html.codex-dream-skin[data-dream-theme="mizuki-25ji"] .dream-sidebar-film {
   top: 72px;
-  right: 4px;
+  right: -1px;
   bottom: 74px;
-  width: 9px;
-  opacity: .28;
-  border-left: 1px solid rgba(221, 170, 204, .26);
+  width: 7px;
+  opacity: .22;
+  border-left: 1px solid rgba(221, 170, 204, .22);
   background: repeating-linear-gradient(
     180deg,
-    rgba(128, 230, 220, .58) 0 5px,
-    transparent 5px 13px
+    rgba(128, 230, 220, .52) 0 3px,
+    transparent 3px 11px
   );
+  filter: drop-shadow(-2px 0 4px rgba(128, 230, 220, .1));
   mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
 }
 

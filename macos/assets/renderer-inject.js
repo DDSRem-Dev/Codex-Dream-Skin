@@ -4,6 +4,7 @@
   const STYLE_ID = "codex-dream-skin-style";
   const CHROME_ID = "codex-dream-skin-chrome";
   const COMPOSER_DECOR_ID = "dream-skin-composer-stickers";
+  const SIDEBAR_DECOR_ID = "dream-skin-sidebar-stickers";
   const SHELL_ATTR = "data-dream-shell";
   const THEME_ATTR = "data-dream-theme";
   const VERSION = __DREAM_SKIN_VERSION_JSON__;
@@ -237,6 +238,28 @@
       composerDecor?.remove();
     }
 
+    const sidebar = document.querySelector("aside.app-shell-left-panel");
+    let sidebarDecor = document.getElementById(SIDEBAR_DECOR_ID);
+    if (sidebar && THEME.id === "mizuki-25ji") {
+      if (!sidebarDecor || sidebarDecor.parentElement !== sidebar) {
+        sidebarDecor?.remove();
+        sidebarDecor = document.createElement("div");
+        sidebarDecor.id = SIDEBAR_DECOR_ID;
+        sidebarDecor.setAttribute("aria-hidden", "true");
+        sidebarDecor.innerHTML = `
+          <i class="dream-sidebar-film"></i>
+          <i class="dream-sidebar-scan"></i>
+          <i class="dream-sidebar-polaroid"></i>
+          <i class="dream-sidebar-tape"></i>
+          <span class="dream-sidebar-status"><b>25:00</b><small>EDIT MODE</small></span>
+          <i class="dream-sidebar-spark dream-sidebar-spark-a">✦</i>
+          <i class="dream-sidebar-spark dream-sidebar-spark-b">✧</i>`;
+        sidebar.appendChild(sidebarDecor);
+      }
+    } else {
+      sidebarDecor?.remove();
+    }
+
     if (!shellMain || !document.body) return;
     shellMain.classList.toggle("dream-skin-home-shell", Boolean(home));
     let chrome = document.getElementById(CHROME_ID);
@@ -281,6 +304,7 @@
     document.querySelectorAll(".dream-skin-home-shell").forEach((node) => node.classList.remove("dream-skin-home-shell"));
     document.querySelectorAll('[data-dream-skin-card]').forEach((node) => node.removeAttribute("data-dream-skin-card"));
     document.getElementById(COMPOSER_DECOR_ID)?.remove();
+    document.getElementById(SIDEBAR_DECOR_ID)?.remove();
     document.getElementById(STYLE_ID)?.remove();
     document.getElementById(CHROME_ID)?.remove();
     const state = window[STATE_KEY];

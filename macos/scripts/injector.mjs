@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const SKIN_VERSION = "1.2.4";
+const SKIN_VERSION = "1.2.5";
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const MAX_ART_BYTES = 16 * 1024 * 1024;
 
@@ -375,6 +375,7 @@ async function verifySession(session) {
     const composer = box(document.querySelector('.composer-surface-chrome'));
     const composerDecor = document.getElementById('dream-skin-composer-stickers');
     const sidebar = box(document.querySelector('aside.app-shell-left-panel'));
+    const sidebarDecor = document.getElementById('dream-skin-sidebar-stickers');
     const chrome = document.getElementById('codex-dream-skin-chrome');
     const result = {
       installed: document.documentElement.classList.contains('codex-dream-skin'),
@@ -394,6 +395,8 @@ async function verifySession(session) {
       composerDecorPresent: Boolean(composerDecor),
       composerDecorPointerEvents: composerDecor ? getComputedStyle(composerDecor).pointerEvents : null,
       sidebar,
+      sidebarDecorPresent: Boolean(sidebarDecor),
+      sidebarDecorPointerEvents: sidebarDecor ? getComputedStyle(sidebarDecor).pointerEvents : null,
       viewport: { width: innerWidth, height: innerHeight },
       documentOverflow: {
         x: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -403,7 +406,10 @@ async function verifySession(session) {
     const basePass = result.installed && result.version === ${JSON.stringify(SKIN_VERSION)} &&
       result.stylePresent && result.chromePresent && result.chromePointerEvents === 'none' &&
       Boolean(result.composer?.visible) && Boolean(result.sidebar?.visible) && !result.documentOverflow.x &&
-      (result.themeId !== 'mizuki-25ji' || (result.composerDecorPresent && result.composerDecorPointerEvents === 'none'));
+      (result.themeId !== 'mizuki-25ji' || (
+        result.composerDecorPresent && result.composerDecorPointerEvents === 'none' &&
+        result.sidebarDecorPresent && result.sidebarDecorPointerEvents === 'none'
+      ));
     // Project selector markup varies across Codex builds — soft requirement.
     const homePass = !result.homeRoute || (
       result.homePresent && result.hero?.visible && result.hero.width >= 280 && result.hero.height >= 120 &&

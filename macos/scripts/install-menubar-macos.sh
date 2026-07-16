@@ -24,6 +24,7 @@ fi
 
 PLUGIN_DIR="$STATE_ROOT/menubar"
 ensure_state_root
+seed_bundled_themes
 /bin/mkdir -p "$PLUGIN_DIR"
 
 PLUGIN_DST="$PLUGIN_DIR/codex_dream_skin.10s.sh"

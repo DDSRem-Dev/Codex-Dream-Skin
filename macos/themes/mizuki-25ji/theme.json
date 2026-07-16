@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "mizuki-25ji",
+  "name": "25時・暁山瑞希",
+  "brandSubtitle": "25時、ナイトコードで。",
+  "tagline": "映像も、コラージュも、コードも。25時の先で輝き続ける。",
+  "projectPrefix": "プロジェクトを開く・",
+  "projectLabel": "◇  プロジェクトを選択",
+  "statusText": "25:00・MV編集中",
+  "quote": "ボクは、ボクのままでいいのかなって、思えたんだ",
+  "image": "mizuki-25ji.jpg",
+  "decorations": {
+    "portrait": "mizuki-official-now.webp",
+    "card1": "mizuki-card-1.webp",
+    "card2": "mizuki-card-2.webp",
+    "card3": "mizuki-card-3.webp",
+    "card4": "mizuki-card-4.jpg"
+  },
+  "colors": {
+    "background": "#171421",
+    "panel": "#211b2d",
+    "panelAlt": "#2b2240",
+    "accent": "#ddaacc",
+    "accentAlt": "#f4c4dd",
+    "secondary": "#80e6dc",
+    "highlight": "#884499",
+    "text": "#fff6fb",
+    "muted": "#cdbdce",
+    "line": "rgba(221, 170, 204, .34)"
+  }
+}

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const SKIN_VERSION = "1.1.1";
+const SKIN_VERSION = "1.2.1";
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const MAX_ART_BYTES = 16 * 1024 * 1024;
 
@@ -240,6 +240,7 @@ async function loadTheme(themeDir) {
     statusText: text(raw.statusText, "DREAM SKIN ONLINE", 80),
     quote: text(raw.quote, "MAKE SOMETHING WONDERFUL", 80),
     image: raw.image,
+    decorations: {},
     colors: {
       background: color(raw.colors?.background, "#071116"),
       panel: color(raw.colors?.panel, "#0b1a20"),
@@ -253,6 +254,15 @@ async function loadTheme(themeDir) {
       line: color(raw.colors?.line, "rgba(124, 255, 70, .28)"),
     },
   };
+  const rawDecorations = raw.decorations && typeof raw.decorations === "object"
+    ? Object.entries(raw.decorations).slice(0, 8)
+    : [];
+  for (const [key, value] of rawDecorations) {
+    if (!/^[a-z][a-z0-9-]{0,30}$/.test(key) || typeof value !== "string") continue;
+    const filename = path.basename(value);
+    if (filename !== value || !/\.(?:png|jpe?g|webp)$/i.test(filename)) continue;
+    theme.decorations[key] = filename;
+  }
   const imagePath = path.join(assetsRoot, theme.image);
   const imageStat = await fs.stat(imagePath);
   if (!imageStat.isFile() || imageStat.size < 1 || imageStat.size > MAX_ART_BYTES) {
@@ -262,7 +272,28 @@ async function loadTheme(themeDir) {
   if (![".png", ".jpg", ".jpeg", ".webp"].includes(extension)) {
     throw new Error(`Unsupported theme image format: ${extension || "missing"}`);
   }
-  return { assetsRoot, imagePath, imageStat, theme };
+  const decorationPaths = {};
+  let decorationBytes = 0;
+  for (const [key, filename] of Object.entries(theme.decorations)) {
+    const decorationPath = path.join(assetsRoot, filename);
+    const stat = await fs.stat(decorationPath);
+    if (!stat.isFile() || stat.size < 1 || stat.size > MAX_ART_BYTES) {
+      throw new Error(`Theme decoration ${key} must be a non-empty file no larger than ${MAX_ART_BYTES} bytes`);
+    }
+    decorationPaths[key] = decorationPath;
+    decorationBytes += stat.size;
+  }
+  if (decorationBytes > MAX_ART_BYTES) {
+    throw new Error(`Theme decorations must total no more than ${MAX_ART_BYTES} bytes`);
+  }
+  return { assetsRoot, imagePath, imageStat, decorationPaths, decorationBytes, theme };
+}
+
+function imageDataUrl(file, bytes) {
+  const extension = path.extname(file).toLowerCase();
+  const mime = extension === ".jpg" || extension === ".jpeg" ? "image/jpeg"
+    : extension === ".webp" ? "image/webp" : "image/png";
+  return `data:${mime};base64,${bytes.toString("base64")}`;
 }
 
 async function loadPayload(themeDir) {
@@ -271,18 +302,20 @@ async function loadPayload(themeDir) {
     fs.readFile(path.join(root, "assets", "renderer-inject.js"), "utf8"),
     loadTheme(themeDir),
   ]);
-  const { imagePath, theme } = loaded;
+  const { imagePath, decorationPaths, decorationBytes, theme } = loaded;
   const art = await fs.readFile(imagePath);
-  const extension = path.extname(imagePath).toLowerCase();
-  const mime = extension === ".jpg" || extension === ".jpeg" ? "image/jpeg"
-    : extension === ".webp" ? "image/webp" : "image/png";
-  const artDataUrl = `data:${mime};base64,${art.toString("base64")}`;
+  const artDataUrl = imageDataUrl(imagePath, art);
+  const decorationDataUrls = {};
+  await Promise.all(Object.entries(decorationPaths).map(async ([key, file]) => {
+    decorationDataUrls[key] = imageDataUrl(file, await fs.readFile(file));
+  }));
   const payload = template
     .replace("__DREAM_SKIN_CSS_JSON__", JSON.stringify(css))
     .replace("__DREAM_SKIN_ART_JSON__", JSON.stringify(artDataUrl))
+    .replace("__DREAM_SKIN_DECORATIONS_JSON__", JSON.stringify(decorationDataUrls))
     .replace("__DREAM_SKIN_THEME_JSON__", JSON.stringify(theme))
     .replace("__DREAM_SKIN_VERSION_JSON__", JSON.stringify(SKIN_VERSION));
-  return { imageBytes: art.length, payload, theme };
+  return { imageBytes: art.length, decorationBytes, payload, theme };
 }
 
 async function applyToSession(session, payload) {
@@ -295,6 +328,7 @@ async function removeFromSession(session) {
     const state = window.__CODEX_DREAM_SKIN_STATE__;
     if (state?.cleanup) return state.cleanup();
     document.documentElement?.classList.remove('codex-dream-skin');
+    document.documentElement?.removeAttribute('data-dream-theme');
     document.documentElement?.style.removeProperty('--dream-skin-art');
     document.getElementById('codex-dream-skin-style')?.remove();
     document.getElementById('codex-dream-skin-chrome')?.remove();
@@ -512,6 +546,7 @@ try {
       themeId: loaded.theme.id,
       themeName: loaded.theme.name,
       imageBytes: loaded.imageBytes,
+      decorationBytes: loaded.decorationBytes,
       payloadBytes: Buffer.byteLength(loaded.payload),
     }, null, 2));
   } else if (options.mode === "watch") await runWatch(options);

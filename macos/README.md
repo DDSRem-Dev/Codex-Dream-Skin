@@ -74,6 +74,19 @@ CDP is powerful and unauthenticated on loopback. Prefer Restore when you are don
 - Keep the left side relatively calm for native home titles
 - Image is banner + background only — never a full-window fake UI overlay
 
+## Bundled themes
+
+The installer adds bundled theme packs to the saved-theme library without touching user-created themes.
+Open SwiftBar's **已保存的主题** menu to switch instantly when CDP is already active.
+
+- **25時・暁山瑞希** — official Mizuki pink / Nightcord violet palette, collage-style glass layers, an MV-editing banner, and four character-card backgrounds
+
+CLI switch:
+
+```bash
+~/.codex/codex-dream-skin-studio/scripts/switch-theme-macos.sh --id mizuki-25ji
+```
+
 CLI example:
 
 ```bash

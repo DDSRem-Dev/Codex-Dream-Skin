@@ -17,6 +17,8 @@ It does **not** grant rights to:
 
 `assets/portal-hero.png` is original abstract geometric art generated for this open-source repository (no characters). Replace it with your own image before shipping a branded theme to customers.
 
+`themes/mizuki-25ji/mizuki-25ji.jpg` is optional third-party character artwork supplied for this theme preset. It is not covered by the MIT License. *Project SEKAI*, 25時、ナイトコードで。, and 暁山瑞希 belong to their respective rights holders; their inclusion does not imply endorsement.
+
 ## Runtime
 
 This project does not redistribute Node.js. At runtime it validates and uses the Node.js executable already signed and bundled inside the user's official Codex desktop application.

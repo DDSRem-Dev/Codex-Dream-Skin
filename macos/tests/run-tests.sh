@@ -25,6 +25,16 @@ fi
 
 "$NODE" "$ROOT/scripts/injector.mjs" --check-payload >/dev/null
 
+MIZUKI_THEME="$ROOT/themes/mizuki-25ji"
+[ -s "$MIZUKI_THEME/theme.json" ]
+[ -s "$MIZUKI_THEME/mizuki-25ji.jpg" ]
+MIZUKI_PAYLOAD_JSON="$("$NODE" "$ROOT/scripts/injector.mjs" --check-payload --theme-dir "$MIZUKI_THEME")"
+"$NODE" -e '
+  const value = JSON.parse(process.argv[1]);
+  if (!value.pass || value.themeId !== "mizuki-25ji" || value.themeName !== "25時・暁山瑞希") process.exit(1);
+  if (!Number.isFinite(value.decorationBytes) || value.decorationBytes < 1) process.exit(1);
+' "$MIZUKI_PAYLOAD_JSON"
+
 TMP="$(/usr/bin/mktemp -d /tmp/codex-dream-skin-tests.XXXXXX)"
 trap '/bin/rm -rf "$TMP"' EXIT
 /bin/mkdir -p "$TMP/theme"
@@ -51,11 +61,29 @@ BACKUP="$TMP/theme-backup.json"
   'keepMe = true' > "$CONFIG"
 /bin/cp "$CONFIG" "$TMP/original.toml"
 "$NODE" "$ROOT/scripts/theme-config.mjs" install "$CONFIG" "$BACKUP" >/dev/null
-/usr/bin/grep -q 'appearanceTheme = "dark"' "$CONFIG"
+/usr/bin/cmp -s "$CONFIG" "$TMP/original.toml"
 "$NODE" "$ROOT/scripts/theme-config.mjs" restore "$CONFIG" "$BACKUP" >/dev/null
 /usr/bin/cmp -s "$CONFIG" "$TMP/original.toml"
 
-/usr/bin/env -u HOME /bin/bash -c '. "$1/scripts/common-macos.sh"; [ -n "$HOME" ] && [ "$SKIN_VERSION" = "1.1.1" ]' _ "$ROOT"
-"$ROOT/scripts/doctor-macos.sh" >/dev/null
+EXPECTED_HOME="$(/usr/bin/id -P "$(/usr/bin/id -un)" | /usr/bin/awk -F: '{print $9}')"
+/usr/bin/env -u HOME /bin/bash -c '. "$1/scripts/common-macos.sh"; [ "$HOME" = "$2" ] && [ "$SKIN_VERSION" = "$(/usr/bin/tr -d "[:space:]" < "$1/VERSION")" ]' _ "$ROOT" "$EXPECTED_HOME"
+/usr/bin/env HOME="$TMP/home" /bin/bash -c '
+  . "$1/scripts/common-macos.sh"
+  ensure_state_root
+  seed_bundled_themes
+  /usr/bin/cmp -s "$1/themes/mizuki-25ji/theme.json" "$STATE_ROOT/themes/mizuki-25ji/theme.json"
+  /usr/bin/cmp -s "$1/themes/mizuki-25ji/mizuki-25ji.jpg" "$STATE_ROOT/themes/mizuki-25ji/mizuki-25ji.jpg"
+  /usr/bin/cmp -s "$1/themes/mizuki-25ji/mizuki-official-now.webp" "$STATE_ROOT/themes/mizuki-25ji/mizuki-official-now.webp"
+  /usr/bin/cmp -s "$1/themes/mizuki-25ji/mizuki-card-1.webp" "$STATE_ROOT/themes/mizuki-25ji/mizuki-card-1.webp"
+  /usr/bin/cmp -s "$1/themes/mizuki-25ji/mizuki-card-2.webp" "$STATE_ROOT/themes/mizuki-25ji/mizuki-card-2.webp"
+  /usr/bin/cmp -s "$1/themes/mizuki-25ji/mizuki-card-3.webp" "$STATE_ROOT/themes/mizuki-25ji/mizuki-card-3.webp"
+  /usr/bin/cmp -s "$1/themes/mizuki-25ji/mizuki-card-4.jpg" "$STATE_ROOT/themes/mizuki-25ji/mizuki-card-4.jpg"
+' _ "$ROOT"
+if [ "${SKIP_DOCTOR:-false}" != "true" ]; then
+  "$ROOT/scripts/doctor-macos.sh" >/dev/null
+  DOCTOR_RESULT="signature and doctor"
+else
+  DOCTOR_RESULT="doctor skipped"
+fi
 
-printf 'PASS: syntax, payload, custom-theme, config round-trip, HOME recovery, signature, and doctor checks.\n'
+printf 'PASS: syntax, payload, bundled/custom themes, config round-trip, HOME recovery; %s.\n' "$DOCTOR_RESULT"

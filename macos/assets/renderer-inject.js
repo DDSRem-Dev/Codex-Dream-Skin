@@ -1,9 +1,10 @@
-((cssText, artDataUrl, themeConfig) => {
+((cssText, artDataUrl, decorationDataUrls, themeConfig) => {
   const STATE_KEY = "__CODEX_DREAM_SKIN_STATE__";
   const DISABLED_KEY = "__CODEX_DREAM_SKIN_DISABLED__";
   const STYLE_ID = "codex-dream-skin-style";
   const CHROME_ID = "codex-dream-skin-chrome";
   const SHELL_ATTR = "data-dream-shell";
+  const THEME_ATTR = "data-dream-theme";
   const VERSION = __DREAM_SKIN_VERSION_JSON__;
   const THEME = themeConfig && typeof themeConfig === "object" ? themeConfig : {};
   const THEME_VARIABLES = [
@@ -23,15 +24,20 @@
     try { previous.mediaQuery.removeEventListener("change", previous.mediaHandler); } catch {}
   }
   if (previous?.artUrl) URL.revokeObjectURL(previous.artUrl);
+  for (const url of Object.values(previous?.artUrls || {})) URL.revokeObjectURL(url);
 
-  const artUrl = (() => {
-    const comma = artDataUrl.indexOf(",");
-    const mime = /^data:([^;,]+)/.exec(artDataUrl)?.[1] || "image/png";
-    const binary = atob(artDataUrl.slice(comma + 1));
+  const dataUrlToObjectUrl = (dataUrl) => {
+    const comma = dataUrl.indexOf(",");
+    const mime = /^data:([^;,]+)/.exec(dataUrl)?.[1] || "image/png";
+    const binary = atob(dataUrl.slice(comma + 1));
     const bytes = new Uint8Array(binary.length);
     for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
     return URL.createObjectURL(new Blob([bytes], { type: mime }));
-  })();
+  };
+  const artUrl = dataUrlToObjectUrl(artDataUrl);
+  const artUrls = Object.fromEntries(Object.entries(decorationDataUrls || {})
+    .filter(([, value]) => typeof value === "string" && value.startsWith("data:"))
+    .map(([key, value]) => [key, dataUrlToObjectUrl(value)]));
 
   const cssString = (value) => JSON.stringify(String(value ?? ""));
 
@@ -172,7 +178,11 @@
     const shell = detectShellMode();
     root.classList.add("codex-dream-skin");
     root.setAttribute(SHELL_ATTR, shell);
+    root.setAttribute(THEME_ATTR, THEME.id || "custom");
     root.style.setProperty("--dream-skin-art", `url("${artUrl}")`);
+    for (const [key, url] of Object.entries(artUrls)) {
+      root.style.setProperty(`--dream-skin-art-${key}`, `url("${url}")`);
+    }
     applyTheme(root, shell);
 
     let style = document.getElementById(STYLE_ID);
@@ -232,8 +242,10 @@
   const cleanup = () => {
     window[DISABLED_KEY] = true;
     document.documentElement?.classList.remove("codex-dream-skin");
+    document.documentElement?.removeAttribute(THEME_ATTR);
     document.documentElement?.removeAttribute(SHELL_ATTR);
     document.documentElement?.style.removeProperty("--dream-skin-art");
+    for (const key of Object.keys(artUrls)) document.documentElement?.style.removeProperty(`--dream-skin-art-${key}`);
     for (const name of THEME_VARIABLES) document.documentElement?.style.removeProperty(name);
     document.querySelectorAll(".dream-skin-home").forEach((node) => node.classList.remove("dream-skin-home"));
     document.querySelectorAll(".dream-skin-home-shell").forEach((node) => node.classList.remove("dream-skin-home-shell"));
@@ -248,6 +260,7 @@
       try { state.mediaQuery.removeEventListener("change", state.mediaHandler); } catch {}
     }
     if (state?.artUrl) URL.revokeObjectURL(state.artUrl);
+    for (const url of Object.values(state?.artUrls || {})) URL.revokeObjectURL(url);
     delete window[STATE_KEY];
     return true;
   };
@@ -289,10 +302,11 @@
     mediaQuery,
     mediaHandler,
     artUrl,
+    artUrls,
     version: VERSION,
     themeId: THEME.id || "custom",
     detectShellMode,
   };
   ensure();
   return { installed: true, version: VERSION, themeId: THEME.id || "custom", shell: detectShellMode() };
-})(__DREAM_SKIN_CSS_JSON__, __DREAM_SKIN_ART_JSON__, __DREAM_SKIN_THEME_JSON__)
+})(__DREAM_SKIN_CSS_JSON__, __DREAM_SKIN_ART_JSON__, __DREAM_SKIN_DECORATIONS_JSON__, __DREAM_SKIN_THEME_JSON__)

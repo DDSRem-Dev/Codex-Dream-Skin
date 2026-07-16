@@ -4,7 +4,10 @@ set -euo pipefail
 
 if [ -z "${HOME:-}" ]; then
   CURRENT_USER="$(/usr/bin/id -un)"
-  HOME="$(/usr/bin/dscl . -read "/Users/$CURRENT_USER" NFSHomeDirectory 2>/dev/null | /usr/bin/awk '{print $2}')"
+  HOME="$(/usr/bin/dscl . -read "/Users/$CURRENT_USER" NFSHomeDirectory 2>/dev/null | /usr/bin/awk '{print $2}')" || HOME=""
+  if [ -z "$HOME" ]; then
+    HOME="$(/usr/bin/id -P "$CURRENT_USER" 2>/dev/null | /usr/bin/awk -F: '{print $9}')" || HOME=""
+  fi
   [ -n "$HOME" ] || { printf 'Codex Dream Skin Studio: could not resolve the current macOS home directory.\n' >&2; exit 1; }
   export HOME
 fi
@@ -26,7 +29,7 @@ START_ERROR_LOG="$STATE_ROOT/start-error.log"
 CODEX_APP_JOB_LABEL="com.openai.codex-dream-skin-studio.app"
 INJECTOR_JOB_LABEL="com.openai.codex-dream-skin-studio.injector"
 EXPECTED_CODEX_TEAM_ID="${CODEX_EXPECTED_TEAM_ID:-2DC432GLL2}"
-SKIN_VERSION="1.1.1"
+SKIN_VERSION="1.2.1"
 
 fail() {
   local message="$*"
@@ -41,6 +44,25 @@ fail() {
 ensure_state_root() {
   /bin/mkdir -p "$STATE_ROOT"
   /bin/chmod 700 "$STATE_ROOT"
+}
+
+seed_bundled_themes() {
+  local bundled_root="$PROJECT_ROOT/themes"
+  local themes_root="$STATE_ROOT/themes"
+  local source
+  local theme_id
+
+  [ -d "$bundled_root" ] || return 0
+  /bin/mkdir -p "$themes_root"
+  for source in "$bundled_root"/*; do
+    [ -d "$source" ] || continue
+    [ -f "$source/theme.json" ] || continue
+    theme_id="$(/usr/bin/basename "$source")"
+    /bin/mkdir -p "$themes_root/$theme_id"
+    /usr/bin/rsync -a --delete "$source/" "$themes_root/$theme_id/"
+    /bin/chmod 700 "$themes_root/$theme_id"
+    /bin/chmod 600 "$themes_root/$theme_id/"* 2>/dev/null || true
+  done
 }
 
 discover_codex_app() {

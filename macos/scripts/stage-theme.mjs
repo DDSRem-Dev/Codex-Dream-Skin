@@ -94,23 +94,49 @@ async function main() {
     throw new Error("Theme image contains control characters");
   }
 
-  const imagePath = path.resolve(sourceRoot, theme.image);
-  assertContained(sourceRoot, imagePath, "Theme image");
-  const image = await readStableFile(imagePath, "Theme image", MAX_IMAGE_BYTES);
-  if (image.bytes.length < 1) throw new Error("Theme image is empty");
+  const assetNames = [theme.image];
+  if (theme.decorations && typeof theme.decorations === "object" && !Array.isArray(theme.decorations)) {
+    for (const [key, value] of Object.entries(theme.decorations).slice(0, 8)) {
+      if (!/^[a-z][a-z0-9-]{0,30}$/.test(key) || typeof value !== "string") continue;
+      const filename = path.basename(value);
+      if (filename !== value || !/\.(?:png|jpe?g|webp)$/i.test(filename)) continue;
+      if (!assetNames.includes(filename)) assetNames.push(filename);
+    }
+  }
+
+  const assets = [];
+  let decorationBytes = 0;
+  for (const [index, filename] of assetNames.entries()) {
+    const assetPath = path.resolve(sourceRoot, filename);
+    const label = index === 0 ? "Theme image" : `Theme decoration ${filename}`;
+    assertContained(sourceRoot, assetPath, label);
+    const asset = await readStableFile(assetPath, label, MAX_IMAGE_BYTES);
+    if (asset.bytes.length < 1) throw new Error(`${label} is empty`);
+    if (index > 0) {
+      decorationBytes += asset.bytes.length;
+      if (decorationBytes > MAX_IMAGE_BYTES) {
+        throw new Error(`Theme decorations total more than ${MAX_IMAGE_BYTES} bytes`);
+      }
+    }
+    assets.push({ filename, bytes: asset.bytes });
+  }
 
   const stageRoot = await fs.realpath(stageDirArg);
   const stageStat = await fs.stat(stageRoot);
   if (!stageStat.isDirectory()) throw new Error("Theme stage must be a directory");
   assertContained(stageRoot, path.join(stageRoot, "theme.json"), "Staged theme config");
-  assertContained(stageRoot, path.join(stageRoot, theme.image), "Staged theme image");
+  for (const { filename } of assets) {
+    assertContained(stageRoot, path.join(stageRoot, filename), `Staged theme asset ${filename}`);
+  }
 
   // Write both files from the already-open, stable descriptors. The caller
   // publishes the image first and theme.json last, so the watcher only ever
   // observes a complete pair; subsequent source edits cannot race the copy.
-  await writeExclusive(path.join(stageRoot, theme.image), image.bytes);
+  for (const { filename, bytes } of assets) {
+    await writeExclusive(path.join(stageRoot, filename), bytes);
+  }
   await writeExclusive(path.join(stageRoot, "theme.json"), config.bytes);
-  process.stdout.write(theme.image);
+  process.stdout.write(assetNames.join("\n"));
 }
 
 await main();

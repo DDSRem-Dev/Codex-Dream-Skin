@@ -33,16 +33,27 @@ try {
   await fs.mkdir(source, { recursive: true });
   await fs.mkdir(stage);
   await fs.copyFile(fixtureAsset, path.join(source, "background-a.png"));
+  await fs.copyFile(fixtureAsset, path.join(source, "portrait.png"));
   await fs.writeFile(
     path.join(source, "theme.json"),
-    `${JSON.stringify({ schemaVersion: 1, id: "preset-race", name: "A", image: "background-a.png" })}\n`,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      id: "preset-race",
+      name: "A",
+      image: "background-a.png",
+      decorations: { portrait: "portrait.png" },
+    })}\n`,
   );
 
-  const imageName = await runStage(source, stage);
-  assert.equal(imageName, "background-a.png");
+  const stagedNames = (await runStage(source, stage)).split("\n");
+  assert.deepEqual(stagedNames, ["background-a.png", "portrait.png"]);
   const stagedConfig = JSON.parse(await fs.readFile(path.join(stage, "theme.json"), "utf8"));
   assert.equal(stagedConfig.image, "background-a.png");
   const stagedBeforeMutation = await fs.readFile(path.join(stage, "background-a.png"));
+  assert.deepEqual(
+    await fs.readFile(path.join(stage, "portrait.png")),
+    await fs.readFile(path.join(source, "portrait.png")),
+  );
 
   // A source edit after staging must not change the pair that is about to be
   // published. This is the regression for switch-theme's old copy-after-

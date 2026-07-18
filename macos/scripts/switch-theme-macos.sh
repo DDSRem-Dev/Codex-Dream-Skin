@@ -73,8 +73,10 @@ stage="$(/usr/bin/mktemp -d "$STATE_ROOT/.theme-switch.XXXXXX")"
 # descriptors. This closes the validation/copy TOCTOU window: after this
 # command returns, edits or symlink swaps in themes/<id> cannot mix the pair
 # that will be published to the live theme directory.
-THEME_IMAGE="$("$NODE" "$SCRIPT_DIR/stage-theme.mjs" "$SRC" "$stage")" \
+STAGED_FILES="$("$NODE" "$SCRIPT_DIR/stage-theme.mjs" "$SRC" "$stage")" \
   || fail "Theme pack changed or failed staging: $THEME_ID"
+THEME_IMAGE="$(/usr/bin/printf '%s\n' "$STAGED_FILES" | /usr/bin/head -n 1)"
+[ -n "$THEME_IMAGE" ] || fail "Theme pack did not stage its primary image: $THEME_ID"
 # Validate the exact staged pair, not the mutable library directory. The
 # injector performs the full schema, path, dimensions, and image checks.
 "$NODE" "$INJECTOR" --check-payload --theme-dir "$stage" >/dev/null \
@@ -91,8 +93,14 @@ done
 # theme.json is the commit marker: the watcher never observes a config that
 # references a partially copied image.
 /bin/mv -f "$stage/theme.json" "$THEME_DIR/theme.json"
-/usr/bin/find "$THEME_DIR" -maxdepth 1 -type f \
-  ! -name 'theme.json' ! -name "$THEME_IMAGE" -delete
+for entry in "$THEME_DIR/"*; do
+  [ -f "$entry" ] || continue
+  entry_name="$(/usr/bin/basename "$entry")"
+  [ "$entry_name" = "theme.json" ] && continue
+  if ! /usr/bin/printf '%s\n' "$STAGED_FILES" | /usr/bin/grep -Fqx -- "$entry_name"; then
+    /bin/rm -f "$entry"
+  fi
+done
 /bin/rm -rf "$stage"
 stage=""
 

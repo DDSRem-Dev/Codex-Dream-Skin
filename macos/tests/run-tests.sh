@@ -71,6 +71,8 @@ done
 /usr/bin/grep -Fq 'dream-skin-composer-stickers' "$ROOT/assets/renderer-inject.js"
 /usr/bin/grep -Fq 'dream-skin-sidebar-stickers' "$ROOT/assets/renderer-inject.js"
 /usr/bin/grep -Fq '__DREAM_SKIN_DECORATIONS_JSON__' "$ROOT/assets/renderer-inject.js"
+/usr/bin/grep -Fq '.sticky.bg-token-main-surface-primary' "$ROOT/assets/dream-skin.css"
+/usr/bin/grep -Fq '.bg-token-input-background\/90' "$ROOT/assets/dream-skin.css"
 
 TMP="$(/usr/bin/mktemp -d /tmp/codex-dream-skin-tests.XXXXXX)"
 TEST_INJECTOR_JOB_LABEL="com.openai.codex-dream-skin-studio.tests.$$"

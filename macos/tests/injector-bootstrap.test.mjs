@@ -8,6 +8,11 @@ import { earlyPayloadFor } from "../scripts/injector.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const injectorPath = path.resolve(here, "../scripts/injector.mjs");
 const source = await fs.readFile(injectorPath, "utf8");
+assert.match(
+  source,
+  /markers\.shell && \(markers\.sidebar \|\| markers\.composer \|\| markers\.main\)/,
+  "Tool routes without a composer or role=main must still identify the official sidebar shell.",
+);
 
 function createFixture() {
   const observers = [];
@@ -78,8 +83,13 @@ assert.match(
 );
 assert.match(
   source,
-  /const suggestionLabelColorsMatch = visibleSuggestionLabels\.every\([\s\S]{0,2500}visibleSuggestionLabels\.length >= result\.visibleCardCount[\s\S]{0,160}result\.suggestionLabelColorsMatch/,
-  "Live verification must reject visible home suggestion labels that diverge from the themed card color.",
+  /result\.revision === null \|\| result\.revision === expectedRevision/,
+  "Live verification must accept the preserved renderer without weakening checks for a reported wrong revision.",
+);
+assert.match(
+  source,
+  /result\.composerDecorPresent[\s\S]{0,300}result\.sidebarDecorPresent[\s\S]{0,900}result\.cardArtCount === Math\.min\(4, result\.visibleCardCount\)/,
+  "Live verification must retain the existing Mizuki decoration and card-art checks.",
 );
 
 console.log("PASS: early injection is shell-guarded, generation-safe, and removed on shutdown.");

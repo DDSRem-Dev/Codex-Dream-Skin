@@ -360,7 +360,7 @@ async function probeSession(session) {
       title: document.title,
       href: location.href,
       markers,
-      codex: markers.shell && (markers.composer || markers.main),
+      codex: markers.shell && (markers.sidebar || markers.composer || markers.main),
     };
   })()`);
 }
@@ -876,7 +876,11 @@ async function verifySession(session, expectedThemeId = null, expectedRevision =
     const home = document.querySelector('[role="main"].dream-skin-home');
     const suggestions = home?.querySelector('.group\\\\/home-suggestions') ?? null;
     const cardButtons = suggestions ? [...suggestions.querySelectorAll('button')] : [];
-    const cardBoxes = cardButtons.map(box);
+    const cardBoxes = cardButtons.map((button) => ({
+      ...box(button),
+      cardIndex: Number(button.getAttribute('data-dream-skin-card')) || null,
+      hasBackgroundArt: getComputedStyle(button).backgroundImage.includes('blob:'),
+    }));
     const visibleCards = cardBoxes.filter((item) => item?.visible);
     const suggestionLabels = cardButtons.flatMap((button) => {
       const expectedColor = getComputedStyle(button).color;
@@ -897,7 +901,9 @@ async function verifySession(session, expectedThemeId = null, expectedRevision =
     const projectButton = box(home?.querySelector('.group\\\\/project-selector > button'));
     const shell = box(document.querySelector('main.main-surface'));
     const composer = box(document.querySelector('.composer-surface-chrome'));
+    const composerDecor = document.getElementById('dream-skin-composer-stickers');
     const sidebar = box(document.querySelector('aside.app-shell-left-panel'));
+    const sidebarDecor = document.getElementById('dream-skin-sidebar-stickers');
     const chrome = document.getElementById('codex-dream-skin-chrome');
     const result = {
       installed: document.documentElement.classList.contains('codex-dream-skin'),
@@ -912,12 +918,17 @@ async function verifySession(session, expectedThemeId = null, expectedRevision =
       hero,
       cards: cardBoxes,
       visibleCardCount: visibleCards.length,
+      cardArtCount: visibleCards.filter((item) => item.hasBackgroundArt && item.cardIndex <= 4).length,
       suggestionLabels,
       suggestionLabelColorsMatch,
       projectButton,
       shell,
       composer,
+      composerDecorPresent: Boolean(composerDecor),
+      composerDecorPointerEvents: composerDecor ? getComputedStyle(composerDecor).pointerEvents : null,
       sidebar,
+      sidebarDecorPresent: Boolean(sidebarDecor),
+      sidebarDecorPointerEvents: sidebarDecor ? getComputedStyle(sidebarDecor).pointerEvents : null,
       viewport: { width: innerWidth, height: innerHeight },
       documentOverflow: {
         x: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -926,18 +937,25 @@ async function verifySession(session, expectedThemeId = null, expectedRevision =
     };
     const basePass = result.installed && result.version === ${JSON.stringify(SKIN_VERSION)} &&
       result.stylePresent && result.chromePresent && result.chromePointerEvents === 'none' &&
-      Boolean(result.shell?.visible) && !result.documentOverflow.x;
+      Boolean(result.shell?.visible) && !result.documentOverflow.x &&
+      (result.themeId !== 'mizuki-25ji' || (
+        (!result.composer?.visible || (
+          result.composerDecorPresent && result.composerDecorPointerEvents === 'none'
+        )) &&
+        (!result.sidebar?.visible || (
+          result.sidebarDecorPresent && result.sidebarDecorPointerEvents === 'none'
+        ))
+      ));
     const expectedThemeId = ${JSON.stringify(expectedThemeId)};
     const expectedRevision = ${JSON.stringify(expectedRevision)};
     const payloadPass = (!expectedThemeId || result.themeId === expectedThemeId) &&
-      (!expectedRevision || result.revision === expectedRevision);
+      (!expectedRevision || result.revision === null || result.revision === expectedRevision);
     // Project selector markup varies across Codex builds — soft requirement.
     const homePass = !result.homeRoute || (
       result.homePresent && result.hero?.visible && result.hero.width >= 280 &&
-      result.hero.height >= 120 && (result.visibleCardCount === 0 || (
-        visibleSuggestionLabels.length >= result.visibleCardCount &&
-        result.suggestionLabelColorsMatch
-      ))
+      result.hero.height >= 120 && result.visibleCardCount >= 1 && result.visibleCardCount <= 6 &&
+      visibleSuggestionLabels.length >= result.visibleCardCount &&
+      (result.themeId !== 'mizuki-25ji' || result.cardArtCount === Math.min(4, result.visibleCardCount))
     );
     result.pass = Boolean(basePass && homePass && payloadPass);
     result.expectedThemeId = expectedThemeId;
@@ -946,6 +964,8 @@ async function verifySession(session, expectedThemeId = null, expectedRevision =
       projectButtonOptional: !result.projectButton?.visible,
       composerOptionalOnNonTaskRoutes: !result.composer?.visible,
       suggestionCardsOptional: result.homeRoute && result.visibleCardCount === 0,
+      suggestionLabelColorDiffers: !result.suggestionLabelColorsMatch,
+      revisionUnavailable: Boolean(expectedRevision && result.revision === null),
     };
     return result;
   })()`);

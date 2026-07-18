@@ -51,6 +51,7 @@ fi
 discover_codex_app
 require_macos_runtime
 ensure_state_root
+codex_is_running && fail "Close Codex before installation so config.toml cannot be rewritten while the app is saving it."
 seed_bundled_themes
 [ -f "$CONFIG_PATH" ] || fail "Codex config not found: $CONFIG_PATH. Launch Codex once, close it, and rerun the installer."
 "$NODE" "$INJECTOR" --check-payload --theme-dir "$THEME_DIR" >/dev/null
@@ -90,6 +91,7 @@ fi
 printf 'Codex Dream Skin Studio %s installed at %s for Codex %s using its signed Node.js %s.\n' \
   "$SKIN_VERSION" "$PROJECT_ROOT" "$CODEX_VERSION" "$NODE_VERSION"
 printf 'Use the Desktop launchers to customize, start, verify, or restore the official appearance.\n'
+printf 'Bundled themes are ready in your theme library; pick one from the menu bar or switch-theme.\n'
 
 if [ "$LAUNCH_AFTER_INSTALL" = "true" ]; then
   "$SCRIPT_DIR/start-dream-skin-macos.sh" --port "$PORT" --prompt-restart

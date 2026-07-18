@@ -52,7 +52,7 @@ theme_id="img-$(/bin/date '+%Y%m%d%H%M%S')-$$"
 
 progress() {
   printf '%s\n' "$*" >&2
-  /usr/bin/osascript -e "display notification \"$*\" with title \"Codex Dream Skin\"" >/dev/null 2>&1 || true
+  notify_user "$*"
 }
 
 progress "Loading image..."

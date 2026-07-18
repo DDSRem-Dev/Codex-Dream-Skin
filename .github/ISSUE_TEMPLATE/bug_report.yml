@@ -71,8 +71,8 @@ body:
       label: Dream Skin version / 皮肤工具版本
       description: |
         macOS: `macos/VERSION` in the repo, or client ZIP release notes (e.g. 1.1.1).
-        Windows: commit / download date if no version file.
-        macOS 见仓库 `macos/VERSION` 或客户包说明；Windows 可写下载日期或 commit。
+        Windows: `windows/VERSION` in the repo, plus the commit or download date when useful.
+        macOS 见仓库 `macos/VERSION` 或客户包说明；Windows 见 `windows/VERSION`，必要时补充下载日期或 commit。
       placeholder: "1.1.1"
     validations:
       required: true

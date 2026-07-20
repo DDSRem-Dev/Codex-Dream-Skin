@@ -47,7 +47,7 @@
 | 客户部署提示词 | ✅ | ❌（可用 Mac 文案改写） |
 | 打客户 ZIP | ✅ `build-client-release.sh` | 手动压缩 `windows/` |
 
-Windows 安装会把运行所需的 `assets/` 与 `scripts/` 原子复制到受管运行时，快捷方式不再依赖源码目录。系统托盘支持更换背景、保存及切换本地主题、暂停和恢复；启动与恢复从已注册的 `OpenAI.Codex` 包身份激活应用，不直接执行受 WindowsApps ACL 限制的路径。
+Windows 安装会把运行所需的 `assets/`、`scripts/` 与 `presets/` 原子复制到受管运行时，快捷方式不再依赖源码目录。系统托盘支持更换背景、保存及切换本地主题、立即暂停和恢复；首次初始化会播种「桥本有菜」与「Gothic Void Crusade」，默认活动主题仍为桥本有菜。启动与恢复从已注册的 `OpenAI.Codex` 包身份激活应用，不直接执行受 WindowsApps ACL 限制的路径。
 
 ## 不要放进这个目录的东西
 
